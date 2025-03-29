@@ -1,0 +1,15 @@
+# Ігноруємо файли Visual Studio
+.vs/
+*.vcxproj.user
+*.vcxproj.filters
+*.sln
+
+# Ігноруємо папки збірки
+x64/
+Debug/
+Release/
+*.obj
+*.exe
+*.ilk
+*.pdb
+*.idb
