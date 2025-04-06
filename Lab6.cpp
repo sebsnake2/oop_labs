@@ -109,40 +109,55 @@ public:
 vector<unique_ptr<Employee>> employees;
 const string ADMIN_PASSWORD = "admin123"; 
 
-// Функція для збереження даних у файл
-void saveToFile() {
-    ofstream file("employees.txt");
-    for (const auto& emp : employees) {
-        file << emp->toString() << endl;
+// Функція для завантаження даних із файлу з обробкою винятків
+void loadFromFile() {
+    try {
+        ifstream file("employees.txt");
+        if (!file) throw runtime_error("Error: Cannot open file for reading.");
+
+        string name, lang;
+        int age, teamSize;
+        double salary;
+
+        while (file >> name >> age >> salary) {
+            if (file.peek() == '\n' || file.eof()) {
+                employees.push_back(make_unique<Employee>(name, age, salary));
+            }
+            else {
+                file >> lang;
+                employees.push_back(make_unique<Developer>(name, age, salary, lang));
+            }
+        }
+        file.close();
     }
-    file.close();
+    catch (const exception& e) {
+        cerr << "Exception caught: " << e.what() << endl;
+    }
 }
 
-// Функція для завантаження даних із файлу
-void loadFromFile() {
-    ifstream file("employees.txt");
-    if (!file) return;
-    string name, lang;
-    int age, teamSize;
-    double salary;
-    while (file >> name >> age >> salary) {
-        if (file.peek() == '\n' || file.eof()) {
-            employees.push_back(make_unique<Employee>(name, age, salary));
+// Функція для збереження даних у файл з обробкою винятків
+void saveToFile() {
+    try {
+        ofstream file("employees.txt");
+        if (!file) throw runtime_error("Error: Cannot open file for writing.");
+        
+        for (const auto& emp : employees) {
+            file << emp->toString() << endl;
         }
-        else {
-            file >> lang;
-            employees.push_back(make_unique<Developer>(name, age, salary, lang));
-        }
+        file.close();
     }
-    file.close();
+    catch (const exception& e) {
+        cerr << "Exception caught: " << e.what() << endl;
+    }
 }
+
+
 
 // Функція для запису дії адміністратора в файл та виведення часу в термінал
 void logAction(const string& action) {
     ofstream logFile("action_log.txt", ios::app); 
     if (logFile.is_open()) {
-        // Отримуємо поточний час
-        time_t now = time(0);
+        time_t now = time(0); // Отримуємо поточний час
         char dt[26]; 
         ctime_s(dt, sizeof(dt), &now); 
 
@@ -157,41 +172,63 @@ void logAction(const string& action) {
 void adminMenu() {
     int choice;
     do {
-        cout << "\nAdmin Menu:" << endl;
-        cout << "1. Add Employee" << endl;
-        cout << "2. Display Employees" << endl;
-        cout << "3. Save and Exit" << endl;
-        cout << "Choice: ";
-        cin >> choice;
+        try {
+            cout << "\nAdmin Menu:" << endl;
+            cout << "1. Add Employee" << endl;
+            cout << "2. Display Employees" << endl;
+            cout << "3. Save and Exit" << endl;
+            cout << "Choice: ";
+            cin >> choice;
 
-        if (choice == 1) {
-            string name, role, lang;
-            int age, teamSize;
-            double salary;
-            cout << "Enter name: "; cin >> name;
-            cout << "Enter age: "; cin >> age;
-            cout << "Enter salary: "; cin >> salary;
-            cout << "Enter role (developer/manager): "; cin >> role;
-            if (role == "developer") {
-                cout << "Enter programming language: "; cin >> lang;
-                employees.push_back(make_unique<Developer>(name, age, salary, lang));
-                // Логуємо дію
-                logAction("Added Developer: " + name + " " + to_string(age) + " " + to_string(salary) + " " + lang);
+            if (cin.fail()) {
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                throw invalid_argument("Invalid input. Please enter a number.");
             }
-            else if (role == "manager") {
-                cout << "Enter team size: "; cin >> teamSize;
-                employees.push_back(make_unique<Manager>(name, age, salary, teamSize));
-                // Логуємо дію
-                logAction("Added Manager: " + name + " " + to_string(age) + " " + to_string(salary) + " " + to_string(teamSize));
+
+            if (choice == 1) {
+                string name, role, lang;
+                int age, teamSize;
+                double salary;
+
+                cout << "Enter name: ";
+                cin >> name;
+
+                cout << "Enter age: ";
+                if (!(cin >> age)) throw invalid_argument("Invalid age input.");
+
+                cout << "Enter salary: ";
+                if (!(cin >> salary)) throw invalid_argument("Invalid salary input.");
+
+                cout << "Enter role (developer/manager): ";
+                cin >> role;
+
+                if (role == "developer") {
+                    cout << "Enter programming language: ";
+                    cin >> lang;
+                    employees.push_back(make_unique<Developer>(name, age, salary, lang));
+                }
+                else if (role == "manager") {
+                    cout << "Enter team size: ";
+                    if (!(cin >> teamSize)) throw invalid_argument("Invalid team size input.");
+                    employees.push_back(make_unique<Manager>(name, age, salary, teamSize));
+                }
+                else {
+                    throw invalid_argument("Invalid role selected.");
+                }
+            }
+            else if (choice == 2) {
+                for (const auto& emp : employees) {
+                    emp->display();
+                    cout << endl;
+                }
             }
         }
-        else if (choice == 2) {
-            for (const auto& emp : employees) {
-                emp->display();
-                cout << endl;
-            }
+        catch (const exception& e) {
+            cerr << "Exception: " << e.what() << endl;
         }
     } while (choice != 3);
+
     saveToFile();
 }
 
